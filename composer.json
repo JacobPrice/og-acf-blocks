@@ -1,0 +1,17 @@
+{
+    "name": "jacobprice/wp-blocks",
+    "description": "Server Side Rendered Gutenberg Blocks",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Jacobprice\\WpBlocks\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "jacobprice",
+            "email": "jacobprice@protonmail.com"
+        }
+    ],
+    "require": {}
+}
