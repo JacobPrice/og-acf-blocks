@@ -4,17 +4,19 @@
 ## Filters:
 
 ```php
-add_filter('og/blocks/dir', function($dir){
+add_filter('og/acf-blocks/dir', function($dir){
     return get_stylesheet_directory() . '/blocks';
 });
 
-add_filter('og/blocks/namespace', function($namespace) {
+add_filter('og/acf-blocks/namespace', function($namespace) {
     return 'CustomNameSpace\\Blocks';
 });
 
-add_filter('og/blocks/default_icon', function($icon) {
+add_filter('og/acf-blocks/default_icon', function($icon) {
     return 'admin-settings';
 });
+
+
 ```
 
 

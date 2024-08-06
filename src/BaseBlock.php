@@ -1,12 +1,10 @@
 <?php
 
-namespace OgBlocks;
+namespace Og\AcfBlocks;
 
 use Timber\Timber;
-use OgBlocks\OgBlocks;
 
-abstract class OgBlock
-{
+abstract class BaseBlock {
 
     public function __construct(public $context)
     {}

@@ -1,42 +1,51 @@
 <?php
 
-namespace OgBlocks;
+namespace Og\AcfBlocks;
 
 use Generator;
 use Timber\Timber;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 
-class OgBlocks
+class BlockManager
 {
     private static $instance = null;
-    private array $config = [];
     private array $block_files = [];
+    public string $blocks_dir_path = '';
+    private string $base_filter = 'og/acf-blocks/';
+    private string | bool $blocks_namespace = false;
+    private string $blocks_default_icon = 'admin-settings';
+    private string $blocks_default_category_title = 'Custom Blocks';
 
-    private function __construct(){}
+    private function __construct(){
 
-    private static function get_instance()
-    {
-        if (self::$instance == null) {
-            self::$instance = new OgBlocks();
-            add_action('init', [self::$instance, 'register']);
-            self::$instance::register_autoloader();
-        }
-        return self::$instance;
     }
 
     public static function init()
     {
-        $instance = self::get_instance();
-        return $instance;
-    }
+        if (self::$instance == null) {
+            self::$instance = new self();
+            self::$instance->setup();
+            self::$instance->register();
 
-    public static function get_block_files()
+        }
+        return self::$instance;
+    }
+    private function setup()
     {
-        $instance = self::get_instance();
-        $blocks_dir = apply_filters('og/blocks/dir', get_stylesheet_directory() . '/blocks');
-        if (!$blocks_dir)
+        $this->blocks_dir_path = apply_filters($this->base_filter . 'blocks_dir_path', get_stylesheet_directory() . '/blocks');
+        $this->blocks_namespace = apply_filters($this->base_filter . 'blocks_namespace', false); //default false
+        $this->blocks_default_icon = apply_filters($this->base_filter . 'blocks_default_icon', 'admin-settings');
+        $this->blocks_default_category_title = apply_filters($this->base_filter . 'blocks_default_category_title', 'Custom Blocks');
+    }
+    public function get_block_files()
+    {
+        $instance = self::init();
+        $blocks_dir = apply_filters('og/acf-blocks/dir', get_stylesheet_directory() . '/blocks');
+        if (!$blocks_dir || !is_dir($blocks_dir)) {
+            _doing_it_wrong(__METHOD__, 'Blocks directory does not exist', '1.0');
             return [];
+        }
 
         if (empty($instance->block_files)) {
             $instance->block_files = iterator_to_array($instance->get_block_files_generator($blocks_dir));
@@ -58,22 +67,9 @@ class OgBlocks
             }
         }
     }
-    private static function register_autoloader()
-    {
-        spl_autoload_register(function ($class) {
-            $namespace = self::config('namespace');
-            $dir_path = self::config('dir_path');
-            $class = str_replace($namespace, '', $class);
-            $class = str_replace('\\', '/', $class);
-            $class = $dir_path . $class . '.php';
-            if (file_exists($class)) {
-                include $class;
-            }
-        });
-    }
     public function register()
     {
-        $blocks = self::get_block_files();
+        $blocks = $this->get_block_files();
         foreach ($blocks as $block_file) {
             $block_data = wp_json_file_decode($block_file, ['associative' => true]);
             $this->register_fields_from_metadata($block_data);
@@ -150,7 +146,7 @@ class OgBlocks
     public function register_locations()
     {
         add_filter('timber/locations', function ($paths) {
-            $paths[] = [self::config('dir_path')];
+            $paths[] = [ $this->blocks_dir_path ];
             return $paths;
         });
     }
@@ -164,20 +160,25 @@ class OgBlocks
                 $categories,
                 [
                     [
-                        'slug' => self::config('default_category'),
-                        'title' => 'Custom Blocks',
-                        'icon' => 'admin-settings'
+                        'slug' => 'og-acf-blocks',
+                        'title' => $this->blocks_default_category_title,
+                        'icon' => $this->blocks_default_icon
                     ]
                 ]
             );
         });
     }
-    private static function make_class_name(string $block_file)
+    private function make_class_name(string $block_file)
     {
-        $namespace = self::config('namespace');
+        $namespace = $this->blocks_namespace;
+        if (!$namespace) {
+            _doing_it_wrong(__METHOD__, 'Blocks namespace is not set', '1.0');
+            return false;
+        }
 
         $block_class = str_replace('.json', '', $block_file);
-        $block_class = str_replace(self::config('dir_path'), '', $block_class);
+        $block_class = str_replace($this->blocks_dir_path, '', $block_class);
+        $block_class = ltrim($block_class, '/');
         $block_class = str_replace('/', '\\', $block_class);
         $block_class = str_replace('block', 'Block', $block_class);
         $block_class = $namespace . $block_class;
@@ -195,10 +196,10 @@ class OgBlocks
     {
         add_filter('block_type_metadata', function ($metadata) use ($block_data, $block_file) {
             if (isset($metadata['name'], $block_data['name']) && $metadata['name'] === $block_data['name']) {
-                $class_name = self::make_class_name($block_file);
+                $class_name = $this->make_class_name($block_file);
                 if (class_exists($class_name)) {
                     $metadata['acf']['renderCallback'] = (function ($block_data, $content, $is_preview, $post_id, $wp_block, $context, ...$args) use ($class_name, $block_file) {
-                        $dir_path = self::config('dir_path');
+                        $dir_path = $this->blocks_dir_path;
                         $theme_path = get_stylesheet_directory();
                         $block_dir_path = str_replace($theme_path, '', $dir_path);
 
@@ -234,8 +235,8 @@ class OgBlocks
                         $editor_twig = $rel_path . 'editor.twig';
                         $view_twig = $rel_path . 'index.twig';
 
-                        $view_twig = wp_normalize_path($this->config('dir_path') . $view_twig);
-                        $editor_twig = wp_normalize_path($this->config('dir_path') . $editor_twig);
+                        $view_twig = wp_normalize_path($this->blocks_dir_path . $view_twig);
+                        $editor_twig = wp_normalize_path($this->blocks_dir_path . $editor_twig);
                         if (!file_exists($editor_twig)) {
                             $editor_twig = $view_twig;
                         }

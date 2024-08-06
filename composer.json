@@ -1,10 +1,10 @@
 {
-    "name": "jacobprice/og-blocks",
+    "name": "jacobprice/og-acf-blocks",
     "description": "Server Side Rendered WP Blocks",
     "type": "library",
     "autoload": {
         "psr-4": {
-            "OgBlocks\\": "src/"
+            "Og\\AcfBlocks\\": "src/"
         }
     },
     "authors": [
