@@ -8,7 +8,7 @@ use OgBlocks\OgBlocks;
 abstract class OgBlock
 {
 
-    public function __construct(private $context)
+    public function __construct(public $context)
     {}
 
     private function data($key, $default = null)

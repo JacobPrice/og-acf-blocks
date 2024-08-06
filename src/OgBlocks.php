@@ -13,49 +13,28 @@ class OgBlocks
     private array $config = [];
     private array $block_files = [];
 
-    private function __construct()
-    {
-        add_action('init', [$this, 'register']);
-    }
+    private function __construct(){}
 
     private static function get_instance()
     {
         if (self::$instance == null) {
             self::$instance = new OgBlocks();
+            add_action('init', [self::$instance, 'register']);
             self::$instance::register_autoloader();
         }
         return self::$instance;
     }
 
-    public static function init(array $config)
+    public static function init()
     {
         $instance = self::get_instance();
-        $instance->config = $config;
         return $instance;
-    }
-
-    public static function config(string $key, $default = null)
-    {
-        $instance = self::get_instance();
-        if (strpos($key, '.') !== false) {
-            $keys = explode('.', $key);
-            $config = $instance->config;
-            foreach ($keys as $key) {
-                if (isset($config[$key])) {
-                    $config = $config[$key];
-                } else {
-                    return null;
-                }
-            }
-            return $config;
-        }
-        return $instance->config[$key] ?? $default;
     }
 
     public static function get_block_files()
     {
         $instance = self::get_instance();
-        $blocks_dir = self::config('dir_path');
+        $blocks_dir = apply_filters('og/blocks/dir', get_stylesheet_directory() . '/blocks');
         if (!$blocks_dir)
             return [];
 
@@ -215,7 +194,7 @@ class OgBlocks
     private function update_block_data($block_data, $block_file)
     {
         add_filter('block_type_metadata', function ($metadata) use ($block_data, $block_file) {
-            if ($metadata['name'] === $block_data['name']) {
+            if (isset($metadata['name'], $block_data['name']) && $metadata['name'] === $block_data['name']) {
                 $class_name = self::make_class_name($block_file);
                 if (class_exists($class_name)) {
                     $metadata['acf']['renderCallback'] = (function ($block_data, $content, $is_preview, $post_id, $wp_block, $context, ...$args) use ($class_name, $block_file) {
@@ -293,15 +272,16 @@ class OgBlocks
                         ];
 
 
+                        $context = Timber::context($block_context);
 
                         $Block = new $class_name(
-                            Timber::context(
-                                $block_context
-                            )
+                            $context
                         );
                         $Block->render();
                     });
                 }
+                return $metadata;
+            } else {
                 return $metadata;
             }
         });

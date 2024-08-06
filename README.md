@@ -1,5 +1,36 @@
 # Wp Blocks
 
+
+## Filters:
+
+```php
+add_filter('og/blocks/dir', function($dir){
+    return get_stylesheet_directory() . '/blocks';
+});
+
+add_filter('og/blocks/namespace', function($namespace) {
+    return 'CustomNameSpace\\Blocks';
+});
+
+add_filter('og/blocks/default_icon', function($icon) {
+    return 'admin-settings';
+});
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Installation
 ```bash
 composer require jacobprice/wp-blocks
